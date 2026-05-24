@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RELAY — Smart Asset Coordination</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        bg: { primary:'#0a0a0f', secondary:'#12121a', card:'#1a1a26', border:'#2a2a3d' },
+        accent: { blue:'#00a3ff', green:'#00ff88', purple:'#8b5cf6', gold:'#ffd700' },
+      },
+      fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+    }
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; }
+  body { background: #0a0a0f; color: #fff; font-family: Inter, system-ui, sans-serif; margin:0; overflow:hidden; }
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:#12121a; }
+  ::-webkit-scrollbar-thumb { background:#2a2a3d; border-radius:2px; }
+  .glow-blue  { box-shadow: 0 0 20px rgba(0,163,255,0.25); }
+  .glow-green { box-shadow: 0 0 20px rgba(0,255,136,0.25); }
+  .glow-amber { box-shadow: 0 0 20px rgba(255,184,0,0.25); }
+  .glow-red   { box-shadow: 0 0 20px rgba(255,68,68,0.25); }
+  .glow-purple{ box-shadow: 0 0 20px rgba(139,92,246,0.25); }
+  .gradient-text { background: linear-gradient(135deg,#00a3ff,#00ff88); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .fade-in { animation: fadeIn 0.35s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .slide-in { animation: slideIn 0.3s ease; }
+  @keyframes slideIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+  .pulse-dot { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .batch-move { animation: batchMove 1.5s ease-in-out; }
+  @keyframes batchMove { from{transform:translateX(-30px);opacity:0.5} to{transform:translateX(0);opacity:1} }
+  .card { background:#1a1a26; border:1px solid #2a2a3d; border-radius:12px; }
+  .card-hover { transition:all 0.2s; cursor:pointer; }
+  .card-hover:hover { border-color:#00a3ff55; transform:translateY(-1px); }
+  .btn { border-radius:8px; padding:8px 16px; font-size:14px; font-weight:500; cursor:pointer; transition:all 0.2s; border:none; display:inline-flex; align-items:center; gap:6px; }
+  .btn-primary { background:#00a3ff; color:#000; }
+  .btn-primary:hover { background:#0088cc; }
+  .btn-secondary { background:#1a1a26; color:#ccc; border:1px solid #2a2a3d; }
+  .btn-secondary:hover { border-color:#00a3ff55; color:#fff; }
+  .btn-success { background:#00ff88; color:#000; }
+  .btn-success:hover { background:#00cc6a; }
+  .btn-danger { background:#ff444422; color:#ff4444; border:1px solid #ff444433; }
+  .tag { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+  .tag-green  { background:#00ff8822; color:#00ff88; }
+  .tag-blue   { background:#00a3ff22; color:#00a3ff; }
+  .tag-amber  { background:#ffb80022; color:#ffb800; }
+  .tag-red    { background:#ff444422; color:#ff4444; }
+  .tag-purple { background:#8b5cf622; color:#8b5cf6; }
+  .tag-muted  { background:#2a2a3d; color:#888; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; cursor:pointer; transition:all 0.15s; color:#888; font-size:14px; font-weight:500; }
+  .nav-item:hover { background:#1a1a26; color:#ccc; }
+  .nav-item.active { color:#fff; }
+  .progress-bar { height:4px; background:#2a2a3d; border-radius:2px; overflow:hidden; }
+  .progress-fill { height:100%; border-radius:2px; transition:width 0.5s ease; }
+  .room-card { border:1px solid #2a2a3d; border-radius:10px; padding:10px; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
+  .room-card:hover { transform:scale(1.02); }
+  .room-card::before { content:''; position:absolute; inset:0; border-radius:10px; opacity:0; transition:opacity 0.2s; }
+  input, select, textarea { background:#12121a; border:1px solid #2a2a3d; border-radius:8px; color:#fff; padding:8px 12px; font-size:14px; outline:none; transition:border-color 0.2s; width:100%; }
+  input:focus, select:focus, textarea:focus { border-color:#00a3ff55; }
+  input::placeholder { color:#444; }
+  select option { background:#12121a; }
+  .stat-card { background:#1a1a26; border:1px solid #2a2a3d; border-radius:12px; padding:20px; }
+  .alert-row { display:flex; align-items:start; gap:12px; padding:12px 16px; border-radius:8px; }
+  .timeline-item { display:flex; gap:12px; padding:8px 0; }
+  .timeline-dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .batch-bar { background:#1a1a26; border:1px solid #2a2a3d; border-radius:8px; padding:8px 12px; margin-bottom:6px; display:flex; align-items:center; gap:10px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+/* ═══════════════════════════════════════════════════
+   CENTRAL MOCK STATE
+═══════════════════════════════════════════════════ */
+const INITIAL_STATE = {
+  role: 'Logistics',
+  currentPage: 'Command Center',
+  rooms: {
+    'Main Hall':       { chairs:80, tables:6, projectors:2, speakers:2, tvs:0, laptops:0, status:'active', type:'hall', expected:{chairs:100,tables:10,projectors:2,speakers:2} },
+    'Storage Room A':  { chairs:124, tables:18, projectors:0, speakers:0, tvs:0, laptops:0, status:'storage', type:'storage', expected:{chairs:124,tables:18} },
+    'Storage Room B':  { chairs:96, tables:22, projectors:4, speakers:0, tvs:0, laptops:0, status:'storage', type:'storage', expected:{chairs:96,tables:22,projectors:4} },
+    'Conference Room': { chairs:12, tables:3, projectors:0, speakers:0, tvs:1, laptops:0, status:'ready', type:'conference', expected:{chairs:12,tables:3,tvs:1} },
+    'Lab 4':           { chairs:20, tables:8, projectors:1, speakers:0, tvs:0, laptops:4, status:'active', type:'lab', expected:{chairs:20,tables:8,projectors:1} },
+    'Loading Area':    { chairs:0, tables:2, projectors:0, speakers:0, tvs:0, laptops:0, status:'transit', type:'loading', expected:{tables:2} },
+    'Event Hall':      { chairs:50, tables:8, projectors:2, speakers:4, tvs:0, laptops:0, status:'ready', type:'event', expected:{chairs:50,tables:8,projectors:2,speakers:4} },
+  },
+  assets: {
+    'RFID-CH-2001': { type:'Chair', name:'Standard Event Chair', zone:'Storage Room A', condition:'Good', status:'Available', dept:'Logistics', value:120 },
+    'RFID-TB-3002': { type:'Table', name:'Folding Event Table', zone:'Storage Room B', condition:'Good', status:'Available', dept:'Logistics', value:350 },
+    'RFID-PR-4003': { type:'Projector', name:'Epson EB-X51', zone:'Main Hall', condition:'Good', status:'In Use', dept:'Events', value:1200 },
+    'RFID-SP-5004': { type:'Speaker', name:'JBL PRX412M', zone:'Event Hall', condition:'Good', status:'Available', dept:'Events', value:600 },
+    'RFID-TV-6005': { type:'TV', name:'Samsung 65" Display', zone:'Conference Room', condition:'Good', status:'In Use', dept:'Finance', value:900 },
+    'RFID-LP-7006': { type:'Laptop', name:'Dell Latitude 5420', zone:'Lab 4', condition:'Worn', status:'In Use', dept:'Events', value:1500 },
+  },
+  deployments: {
+    'EV-A231': { event:'Annual Conference', from:'Storage Room B', to:'Main Hall', status:'In Transit', readiness:94, progress:0.42, chairs:100, tables:10, projectors:2, speakers:2, started:'10 min ago' },
+    'EV-B102': { event:'Board Meeting Setup', from:'Storage Room A', to:'Conference Room', status:'Planned', readiness:100, progress:0, chairs:12, tables:3, projectors:0, speakers:0, started:null },
+  },
+  alerts: [
+    { id:1, type:'missing', severity:'error', room:'Main Hall', message:'3 chairs missing in Main Hall', time:'5 min ago' },
+    { id:2, type:'foreign', severity:'warning', room:'Storage Room B', message:'Foreign asset: 2 laptops in Storage Room B', time:'12 min ago' },
+    { id:3, type:'damaged', severity:'error', room:'Lab 4', message:'Damaged asset RFID-LP-7006 reported', time:'1 hour ago' },
+    { id:4, type:'missing', severity:'warning', room:'Event Hall', message:'1 projector not returned from Event Hall', time:'2 hours ago' },
+    { id:5, type:'discrepancy', severity:'warning', room:'Conference Room', message:'Asset count discrepancy detected in Conference Room', time:'3 hours ago' },
+  ],
+  auditResults: {},
+};
+
+const ROLE_CONFIG = {
+  Logistics: {
+    color: '#00a3ff', colorClass:'text-blue-400', bgClass:'bg-blue-500',
+    kpis:[
+      { label:'Active Deployments', value:'2', color:'#00a3ff', change:'+1' },
+      { label:'Assets In Transit', value:'128', color:'#00ff88', change:'+23' },
+      { label:'Rooms With Issues', value:'3', color:'#ffb800', change:'-1' },
+      { label:'Fleet Utilization', value:'87%', color:'#8b5cf6', change:'+4%' },
+    ],
+    actions:['🚛 Deploy Event Setup','📦 Move Room Setup','↩️ Return Assets','📋 Create Movement Plan'],
+    insights:[
+      'Chair Batch-4 delayed 12 min in transit to Main Hall',
+      'Storage Room B operating at 95% capacity',
+      '3 active movement routes require coordination',
+      'Main Hall receiving deployment EV-A231 (42% complete)',
+    ],
+  },
+  Finance: {
+    color: '#00d084', colorClass:'text-green-400', bgClass:'bg-green-500',
+    kpis:[
+      { label:'Infrastructure Value', value:'$2.4M', color:'#00d084', change:'+$80K' },
+      { label:'Underutilized Assets', value:'42', color:'#ff6b35', change:'-8' },
+      { label:'Depreciation Risk', value:'$180K', color:'#ffd700', change:'+$12K' },
+      { label:'ROI Score', value:'340%', color:'#00a3ff', change:'+18%' },
+    ],
+    actions:['💰 Generate Cost Report','📊 Review Asset Usage','⚠️ Replacement Planning','📈 Utilization Analysis'],
+    insights:[
+      '$450K in assets unused for 30+ days — review recommended',
+      'Projector fleet ROI exceeds 340% annually',
+      'Storage Room A contains $890K in equipment',
+      'Chair utilization rate: 87% — above 80% target',
+    ],
+  },
+  Events: {
+    color: '#8b5cf6', colorClass:'text-purple-400', bgClass:'bg-purple-500',
+    kpis:[
+      { label:'Active Events', value:'3', color:'#8b5cf6', change:'+1' },
+      { label:'Setup Completion', value:'82%', color:'#00ff88', change:'+12%' },
+      { label:'Assets Pending', value:'2', color:'#f59e0b', change:'0' },
+      { label:'On-Time Rate', value:'94%', color:'#00a3ff', change:'+2%' },
+    ],
+    actions:['🎯 Create Event','📅 Deploy Event Setup','✅ Verify Returns','🔔 Send Crew Alert'],
+    insights:[
+      'Annual Conference setup: 82% complete, on track',
+      '2 projectors delayed for Conference Room — ETA 20 min',
+      'Event Hall fully ready for next deployment',
+      'Board Meeting requires 15 additional chairs',
+    ],
+  },
+};
+
+/* ═══════════════════════════════════════════════════
+   ICONS (SVG inline)
+═══════════════════════════════════════════════════ */
+const Icon = ({ name, size=16, color='currentColor' }) => {
+  const icons = {
+    home: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+    map: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>,
+    scan: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h3v3H7zM14 7h3v3h-3zM7 14h3v3H7zM14 14h3v3h-3z"/></svg>,
+    calendar: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+    box: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>,
+    bell: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+    chart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    audit: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
+    deploy: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>,
+    truck: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+    check: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+    x: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+    alert: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+    search: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+    user: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    arrow: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+    refresh: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>,
+    zap: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+    globe: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+    wifi: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>,
+    trending: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  };
+  return icons[name] || null;
+};
+
+/* ═══════════════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════════════ */
+function Sidebar({ currentPage, onNavigate, role }) {
+  const rc = ROLE_CONFIG[role];
+  const navItems = [
+    { label:'Command Center', icon:'home' },
+    { label:'Live Map', icon:'map' },
+    { label:'Scanner', icon:'scan' },
+    { label:'Event Planner', icon:'calendar' },
+    { label:'Asset 360', icon:'box' },
+    { label:'Alerts', icon:'bell' },
+    { label:'Analytics', icon:'chart' },
+    { label:'Audit Mode', icon:'audit' },
+    { label:'System Deployment', icon:'deploy' },
+  ];
+  return (
+    <div style={{width:220,background:'#0d0d18',borderRight:'1px solid #1e1e2e',height:'100vh',display:'flex',flexDirection:'column',flexShrink:0}}>
+      {/* Logo */}
+      <div style={{padding:'20px 16px 12px',borderBottom:'1px solid #1e1e2e'}}>
+        <div style={{fontSize:22,fontWeight:800,letterSpacing:2}} className="gradient-text">RELAY</div>
+        <div style={{fontSize:11,color:'#555',marginTop:2}}>Asset Coordination Platform</div>
+      </div>
+      {/* Nav */}
+      <div style={{flex:1,overflowY:'auto',padding:'10px 8px'}}>
+        {navItems.map(item => {
+          const active = currentPage === item.label;
+          return (
+            <div key={item.label}
+              className={`nav-item${active?' active':''}`}
+              style={active ? {background:`${rc.color}18`,color:'#fff',borderLeft:`3px solid ${rc.color}`,paddingLeft:9} : {}}
+              onClick={() => onNavigate(item.label)}>
+              <Icon name={item.icon} size={15} color={active ? rc.color : '#666'} />
+              <span>{item.label}</span>
+            </div>
+          );
+        })}
+      </div>
+      {/* Bottom */}
+      <div style={{padding:'12px 8px',borderTop:'1px solid #1e1e2e'}}>
+        <div style={{padding:'8px 12px',borderRadius:8,background:'#12121a',fontSize:12,color:'#555'}}>
+          <div style={{color:'#888',marginBottom:2}}>v2.1.0 — Demo Mode</div>
+          <div style={{color:'#444'}}>All data is simulated</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   TOP BAR
+═══════════════════════════════════════════════════ */
+function TopBar({ role, onRoleChange, currentPage, alertCount }) {
+  const [search, setSearch] = useState('');
+  const rc = ROLE_CONFIG[role];
+  return (
+    <div style={{height:60,background:'#0d0d18',borderBottom:'1px solid #1e1e2e',display:'flex',alignItems:'center',padding:'0 20px',gap:16,flexShrink:0}}>
+      {/* Page title */}
+      <div style={{flex:1}}>
+        <div style={{fontSize:16,fontWeight:700,color:'#fff'}}>{currentPage}</div>
+        <div style={{fontSize:11,color:'#555'}}>RELAY Platform</div>
+      </div>
+      {/* LIVE badge */}
+      <div style={{display:'flex',alignItems:'center',gap:6,background:'#00ff8820',border:'1px solid #00ff8840',borderRadius:20,padding:'4px 10px',fontSize:11,fontWeight:700,color:'#00ff88'}}>
+        <div className="pulse-dot" style={{width:6,height:6,borderRadius:'50%',background:'#00ff88'}}/>
+        LIVE
+      </div>
+      {/* Role switcher */}
+      <div style={{display:'flex',gap:4,background:'#12121a',border:'1px solid #2a2a3d',borderRadius:8,padding:4}}>
+        {['Logistics','Finance','Events'].map(r => (
+          <button key={r}
+            style={{padding:'5px 12px',borderRadius:6,fontSize:12,fontWeight:600,cursor:'pointer',border:'none',transition:'all 0.15s',
+              background: role===r ? rc.color : 'transparent',
+              color: role===r ? '#000' : '#666'}}
+            onClick={() => onRoleChange(r)}>{r}</button>
+        ))}
+      </div>
+      {/* Search */}
+      <div style={{position:'relative'}}>
+        <Icon name="search" size={14} color="#555" style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)'}} />
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search assets, rooms..."
+          style={{width:200,paddingLeft:32,paddingRight:12,height:34,fontSize:13}} />
+      </div>
+      {/* Notifications */}
+      <div style={{position:'relative',cursor:'pointer'}}>
+        <div style={{width:34,height:34,borderRadius:8,background:'#12121a',border:'1px solid #2a2a3d',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <Icon name="bell" size={16} color="#888" />
+        </div>
+        {alertCount > 0 && <div style={{position:'absolute',top:-4,right:-4,width:16,height:16,background:'#ff4444',borderRadius:'50%',fontSize:9,fontWeight:700,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center'}}>{alertCount}</div>}
+      </div>
+      {/* Avatar */}
+      <div style={{width:34,height:34,borderRadius:'50%',background:`${rc.color}33`,border:`2px solid ${rc.color}55`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+        <Icon name="user" size={14} color={rc.color} />
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   COMMAND CENTER
+═══════════════════════════════════════════════════ */
+function CommandCenter({ state, setState, role }) {
+  const rc = ROLE_CONFIG[role];
+  const dep = state.deployments['EV-A231'];
+  return (
+    <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-in">
+      {/* KPI Cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:24}}>
+        {rc.kpis.map((k,i) => (
+          <div key={i} className="stat-card card-hover" style={{borderTop:`3px solid ${k.color}`}}>
+            <div style={{fontSize:11,color:'#666',marginBottom:8,textTransform:'uppercase',letterSpacing:1}}>{k.label}</div>
+            <div style={{fontSize:28,fontWeight:800,color:k.color}}>{k.value}</div>
+            <div style={{fontSize:11,color:'#555',marginTop:4}}>
+              <span style={{color:k.change.startsWith('-')?'#ff4444':'#00ff88'}}>{k.change}</span> vs last week
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:24}}>
+        {/* Quick Actions */}
+        <div className="card" style={{padding:20}}>
+          <div style={{fontSize:14,fontWeight:700,color:'#fff',marginBottom:16}}>{role} Actions</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+            {rc.actions.map((a,i) => (
+              <button key={i} className="btn btn-secondary" style={{justifyContent:'flex-start',height:44,fontSize:13}}>
+                {a}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Active Deployment */}
+        <div className="card" style={{padding:20}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+            <div style={{fontSize:14,fontWeight:700,color:'#fff'}}>Active Deployment</div>
+            <span className="tag tag-blue">In Transit</span>
+          </div>
+          <div style={{fontSize:18,fontWeight:700,color:'#fff',marginBottom:4}}>{dep.event}</div>
+          <div style={{fontSize:13,color:'#888',marginBottom:12}}>{dep.from} → {dep.to}</div>
+          <div style={{marginBottom:8}}>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'#666',marginBottom:4}}>
+              <span>Progress</span><span style={{color:'#00a3ff'}}>{Math.round(dep.progress*100)}%</span>
+            </div>
+            <div className="progress-bar"><div className="progress-fill" style={{width:`${dep.progress*100}%`,background:rc.color}} /></div>
+          </div>
+          <div style={{display:'flex',gap:16,fontSize:12,color:'#666'}}>
+            <span>🪑 {dep.chairs} chairs</span>
+            <span>📋 {dep.tables} tables</span>
+            <span>📽️ {dep.projectors} proj.</span>
+            <span>🔊 {dep.speakers} speak.</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:16}}>
+        {/* Insights */}
+        <div className="card" style={{padding:20}}>
+          <div style={{fontSize:14,fontWeight:700,color:'#fff',marginBottom:16}}>{role} Insights</div>
+          {rc.insights.map((ins,i) => (
+            <div key={i} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:i<rc.insights.length-1?'1px solid #1e1e2e':''}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:rc.color,marginTop:5,flexShrink:0}} />
+              <div style={{fontSize:13,color:'#ccc'}}>{ins}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Zone Summary */}
+        <div className="card" style={{padding:20}}>
+          <div style={{fontSize:14,fontWeight:700,color:'#fff',marginBottom:16}}>Zone Overview</div>
+          {Object.entries(state.rooms).slice(0,5).map(([name, room]) => {
+            const total = Object.values(room).filter(v=>typeof v==='number').reduce((a,b)=>a+b,0);
+            const statusColor = room.status==='active'?'#00a3ff':room.status==='storage'?'#888':room.status==='transit'?'#ffb800':'#00ff88';
+            return (
+              <div key={name} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid #1e1e2e'}}>
+                <div>
+                  <div style={{fontSize:13,color:'#ccc'}}>{name.replace(' Room ','  ')}</div>
+                  <div style={{fontSize:11,color:'#555'}}>{room.chairs+room.tables+room.projectors} assets</div>
+                </div>
+                <div style={{width:8,height:8,borderRadius:'50%',background:statusColor}} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   LIVE MAP
+═══════════════════════════════════════════════════ */
+function LiveMap({ state, role }) {
+  const rc = ROLE_CONFIG[role];
+  const [selectedRoom, setSelectedRoom] = useState(null);
+
+  const roomLayout = [
+    { name:'Storage Room A', row:1, col:1, span:1, type:'storage' },
+    { name:'Storage Room B', row:1, col:2, span:1, type:'storage' },
+    { name:'Loading Area',   row:1, col:3, span:1, type:'loading' },
+    { name:'Main Hall',      row:2, col:1, span:2, type:'hall' },
+    { name:'Conference Room',row:2, col:3, span:1, type:'conference' },
+    { name:'Lab 4',          row:3, col:1, span:1, type:'lab' },
+    { name:'Event Hall',     row:3, col:2, span:2, type:'event' },
+  ];
+
+  const typeColors = {
+    storage:'#2a2a1a', hall:'#1a2030', conference:'#2d1b45', lab:'#1a2a1a', loading:'#3a2617', event:'#221a3a'
+  };
+
+  const getAuditBorder = (name) => {
+    if (!state.auditResults[name]) return rc.color+'44';
+    const s = state.auditResults[name].status;
+    return s==='verified'?'#00ff88':s==='warning'?'#ffb800':'#ff4444';
+  };
+
+  const getAuditGlow = (name) => {
+    if (!state.auditResults[name]) return '';
+    const s = state.auditResults[name].status;
+    return s==='verified'?'glow-green':s==='warning'?'glow-amber':'glow-red';
+  };
+
+  const room = selectedRoom ? state.rooms[selectedRoom] : null;
+
+  return (
+    <div style={{height:'100%',display:'flex',gap:16,padding:24,overflow:'hidden'}} className="fade-in">
+      {/* Map */}
+      <div style={{flex:1,display:'flex',flexDirection:'column'}}>
+        {/* Filters */}
+        <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center'}}>
+          {['All','Chairs','Tables','Electronics','In Transit','Damaged'].map(f => (
+            <button key={f} className="btn btn-secondary" style={{height:30,fontSize:12,padding:'0 12px'}}>{f}</button>
+          ))}
+          <div style={{marginLeft:'auto',display:'flex',gap:8,fontSize:12,color:'#555'}}>
+            <span style={{color:'#00ff88'}}>● Verified</span>
+            <span style={{color:'#ffb800'}}>● Warning</span>
+            <span style={{color:'#ff4444'}}>● Alert</span>
+          </div>
+        </div>
+
+        {/* Floor plan */}
+        <div className="card" style={{flex:1,padding:16,position:'relative'}}>
+          <div style={{position:'absolute',top:12,left:12,fontSize:11,color:'#555',fontWeight:600,letterSpacing:2,textTransform:'uppercase'}}>QSTP Building — Floor 1</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gridTemplateRows:'repeat(3,1fr)',gap:8,height:'100%',paddingTop:20}}>
+            {roomLayout.map(r => {
+              const rd = state.rooms[r.name];
+              const isSelected = selectedRoom === r.name;
+              const totalAssets = rd.chairs + rd.tables + rd.projectors + rd.speakers + rd.tvs + rd.laptops;
+              const statusColor = rd.status==='active'?'#00a3ff':rd.status==='storage'?'#888':rd.status==='transit'?'#ffb800':'#00ff88';
+              const auditResult = state.auditResults[r.name];
+              const borderColor = auditResult ? getAuditBorder(r.name) : (isSelected ? rc.color : '#2a2a3d');
+
+              return (
+                <div key={r.name}
+                  className={`room-card ${getAuditGlow(r.name)}`}
+                  style={{
+                    gridColumn:`${r.col} / span ${r.span}`,
+                    gridRow:`${r.row}`,
+                    background: typeColors[r.type]||'#1a1a26',
+                    border:`2px solid ${borderColor}`,
+                    cursor:'pointer',
+                    transition:'all 0.2s',
+                    transform: isSelected?'scale(1.02)':'scale(1)',
+                  }}
+                  onClick={() => setSelectedRoom(r.name === selectedRoom ? null : r.name)}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
+                    <div style={{fontSize:12,fontWeight:700,color:'#fff'}}>{r.name}</div>
+                    <div style={{width:7,height:7,borderRadius:'50%',background:statusColor,boxShadow:`0 0 6px ${statusColor}`}} />
+                  </div>
+                  <div style={{fontSize:20,fontWeight:800,color:rc.color,marginBottom:4}}>{totalAssets}</div>
+                  <div style={{fontSize:10,color:'#555',marginBottom:6}}>assets</div>
+                  <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                    {rd.chairs>0&&<span style={{fontSize:10,color:'#888'}}>🪑{rd.chairs}</span>}
+                    {rd.tables>0&&<span style={{fontSize:10,color:'#888'}}>📋{rd.tables}</span>}
+                    {rd.projectors>0&&<span style={{fontSize:10,color:'#888'}}>📽️{rd.projectors}</span>}
+                    {rd.speakers>0&&<span style={{fontSize:10,color:'#888'}}>🔊{rd.speakers}</span>}
+                    {rd.tvs>0&&<span style={{fontSize:10,color:'#888'}}>📺{rd.tvs}</span>}
+                    {rd.laptops>0&&<span style={{fontSize:10,color:'#888'}}>💻{rd.laptops}</span>}
+                  </div>
+                  {auditResult && (
+                    <div style={{position:'absolute',top:6,right:20,fontSize:10,fontWeight:700,
+                      color:auditResult.status==='verified'?'#00ff88':auditResult.status==='warning'?'#ffb800':'#ff4444'}}>
+                      {auditResult.status==='verified'?'✅ VERIFIED':auditResult.status==='warning'?'⚠️ WARN':'🔴 ALERT'}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Active route */}
+        <div className="card" style={{marginTop:12,padding:'12px 16px',display:'flex',alignItems:'center',gap:16}}>
+          <Icon name="truck" size={18} color="#00a3ff" />
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:600,color:'#fff'}}>EV-A231 In Transit</div>
+            <div style={{fontSize:12,color:'#888'}}>Storage Room B → Main Hall • 42% complete</div>
+          </div>
+          <div style={{width:160}}>
+            <div className="progress-bar"><div className="progress-fill" style={{width:'42%',background:'#00a3ff'}} /></div>
+          </div>
+          <span className="tag tag-blue">Active</span>
+        </div>
+      </div>
+
+      {/* Room Detail Panel */}
+      <div style={{width:260,display:'flex',flexDirection:'column',gap:12}}>
+        {selectedRoom && room ? (
+          <div className="card fade-in" style={{padding:16}}>
+            <div style={{fontSize:13,fontWeight:700,color:'#fff',marginBottom:4}}>📍 {selectedRoom}</div>
+            <div style={{fontSize:11,color:'#555',marginBottom:12,textTransform:'uppercase'}}>{room.type}</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
+              {[['Chairs',room.chairs,'🪑'],['Tables',room.tables,'📋'],['Projectors',room.projectors,'📽️'],['Speakers',room.speakers,'🔊'],['TVs',room.tvs,'📺'],['Laptops',room.laptops,'💻']].map(([l,v,ic])=>v>0&&(
+                <div key={l} style={{background:'#12121a',borderRadius:8,padding:'8px 10px',textAlign:'center'}}>
+                  <div style={{fontSize:16}}>{ic}</div>
+                  <div style={{fontSize:18,fontWeight:800,color:rc.color}}>{v}</div>
+                  <div style={{fontSize:10,color:'#555'}}>{l}</div>
+                </div>
+              ))}
+            </div>
+            {state.auditResults[selectedRoom] && (
+              <div style={{background:'#12121a',borderRadius:8,padding:10,marginBottom:8}}>
+                <div style={{fontSize:11,color:'#888',marginBottom:4}}>Last Audit</div>
+                <div style={{fontSize:22,fontWeight:800,color:state.auditResults[selectedRoom].status==='verified'?'#00ff88':state.auditResults[selectedRoom].status==='warning'?'#ffb800':'#ff4444'}}>
+                  {state.auditResults[selectedRoom].score}%
+                </div>
+                <div style={{fontSize:11,color:'#555'}}>Integrity Score</div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="card" style={{padding:16,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:200,color:'#444',fontSize:13,textAlign:'center'}}>
+            Click a room on the map to view details
+          </div>
+        )}
+
+        {/* Zone Stats */}
+        <div className="card" style={{padding:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#888',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Zone Stats</div>
+          {[['Total Assets','290','📦'],['In Transit','128','🚛'],['Registered','6','🏷️'],['Rooms Active','4','🏢']].map(([l,v,ic]) => (
+            <div key={l} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #1e1e2e'}}>
+              <span style={{fontSize:12,color:'#888'}}>{ic} {l}</span>
+              <span style={{fontSize:13,fontWeight:700,color:'#fff'}}>{v}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Legend */}
+        <div className="card" style={{padding:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#888',marginBottom:10,textTransform:'uppercase',letterSpacing:1}}>Legend</div>
+          {[['Active',rc.color],['Ready','#00ff88'],['In Transit','#ffb800'],['Storage','#888']].map(([l,c]) => (
+            <div key={l} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+              <div style={{width:8,height:8,borderRadius:'50%',background:c,boxShadow:`0 0 6px ${c}`}} />
+              <span style={{fontSize:12,color:'#888'}}>{l}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   SCANNER
+═══════════════════════════════════════════════════ */
+function Scanner({ state, setState, role }) {
+  const rc = ROLE_CONFIG[role];
+  const [mode, setMode] = useState('register');
+  const [form, setForm] = useState({ id:'RFID-CH-'+(Math.floor(Math.random()*9000)+1000), type:'Chair', name:'', zone:'Storage Room A', condition:'Good', status:'Available', dept:'Logistics', value:'' });
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    if (!form.id || !form.type) return;
+    setState(s => ({...s, assets:{...s.assets, [form.id]:{type:form.type,name:form.name||`Standard ${form.type}`,zone:form.zone,condition:form.condition,status:form.status,dept:form.dept,value:Number(form.value)||0}}}));
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2500);
+  };
+
+  const templates = [
+    { type:'Chair', icon:'🪑', value:120 },
+    { type:'Table', icon:'📋', value:350 },
+    { type:'Projector', icon:'📽️', value:1200 },
+    { type:'Speaker', icon:'🔊', value:600 },
+    { type:'TV', icon:'📺', value:900 },
+    { type:'Laptop', icon:'💻', value:1500 },
+  ];
+
+  return (
+    <div style={{height:'100%',display:'flex',gap:16,padding:24,overflow:'hidden'}} className="fade-in">
+      {/* Left: scan area */}
+      <div style={{width:300,display:'flex',flexDirection:'column',gap:12}}>
+        {/* Scan simulation */}
+        <div className="card" style={{padding:20,textAlign:'center'}}>
+          <div style={{width:120,height:120,border:`2px solid ${rc.color}`,borderRadius:12,margin:'0 auto 12px',display:'flex',alignItems:'center',justifyContent:'center',background:'#12121a',fontSize:40}}>
+            📱
+          </div>
+          <div style={{fontSize:13,color:'#888',marginBottom:12}}>Position RFID tag or QR code</div>
+          <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',height:40}}
+            onClick={() => {
+              const types = ['Chair','Table','Projector','Speaker'];
+              const t = types[Math.floor(Math.random()*types.length)];
+              setForm(f => ({...f, type:t, id:`RFID-${t.substring(0,2).toUpperCase()}-${Math.floor(Math.random()*9000)+1000}`}));
+            }}>
+            <Icon name="refresh" size={14} />  Simulate Scan
+          </button>
+        </div>
+
+        {/* Templates */}
+        <div className="card" style={{padding:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#888',marginBottom:10,textTransform:'uppercase',letterSpacing:1}}>Quick Templates</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+            {templates.map(t => (
+              <button key={t.type} className="btn btn-secondary" style={{justifyContent:'flex-start',height:40,fontSize:12}}
+                onClick={() => setForm(f => ({...f, type:t.type, id:`RFID-${t.type.substring(0,2).toUpperCase()}-${Math.floor(Math.random()*9000)+1000}`, value:t.value}))}>
+                {t.icon} {t.type}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Registered assets */}
+        <div className="card" style={{padding:16,flex:1,overflowY:'auto'}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#888',marginBottom:10,textTransform:'uppercase',letterSpacing:1}}>Recent Assets ({Object.keys(state.assets).length})</div>
+          {Object.entries(state.assets).map(([id,asset]) => (
+            <div key={id} style={{padding:'8px 0',borderBottom:'1px solid #1e1e2e',cursor:'pointer'}}
+              onClick={() => setForm({id,type:asset.type,name:asset.name,zone:asset.zone,condition:asset.condition,status:asset.status,dept:asset.dept,value:asset.value})}>
+              <div style={{fontSize:12,fontWeight:600,color:'#ccc'}}>{id}</div>
+              <div style={{fontSize:11,color:'#555'}}>{asset.type} • {asset.zone}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right: registration form */}
+      <div className="card" style={{flex:1,padding:24,overflowY:'auto'}}>
+        <div style={{fontSize:18,fontWeight:700,color:'#fff',marginBottom:4}}>
+          {saved ? '✅ Asset Saved Successfully' : 'Register / Edit Asset'}
+        </div>
+        <div style={{fontSize:13,color:'#666',marginBottom:24}}>Complete all fields to register or update an asset in the system.</div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+          {[
+            { label:'Asset ID', key:'id', type:'text' },
+            { label:'Asset Type', key:'type', type:'select', opts:['Chair','Table','Projector','Speaker','TV','Laptop','Lab Equipment','Other'] },
+            { label:'Product Name', key:'name', type:'text', ph:'e.g. Standard Event Chair' },
+            { label:'Current Zone', key:'zone', type:'select', opts:Object.keys(state.rooms) },
+            { label:'Condition', key:'condition', type:'select', opts:['New','Good','Worn','Damaged','Needs Repair'] },
+            { label:'Status', key:'status', type:'select', opts:['Available','In Use','In Transit','Reserved','Maintenance'] },
+            { label:'Department Owner', key:'dept', type:'select', opts:['Logistics','Events','Finance','Facilities'] },
+            { label:'Estimated Value ($)', key:'value', type:'number', ph:'0' },
+          ].map(field => (
+            <div key={field.key}>
+              <label style={{fontSize:12,color:'#888',display:'block',marginBottom:6}}>{field.label}</label>
+              {field.type === 'select' ? (
+                <select value={form[field.key]} onChange={e=>setForm(f=>({...f,[field.key]:e.target.value}))}>
+                  {field.opts.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ) : (
+                <input type={field.type||'text'} value={form[field.key]} placeholder={field.ph||''}
+                  onChange={e=>setForm(f=>({...f,[field.key]:e.target.value}))} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div style={{display:'flex',gap:12,marginTop:24}}>
+          <button className="btn btn-success" style={{padding:'10px 24px',fontSize:14}} onClick={handleSave}>
+            <Icon name="check" size={14} /> Save Asset
+          </button>
+          <button className="btn btn-secondary" style={{padding:'10px 24px',fontSize:14}}
+            onClick={() => setForm({id:'RFID-CH-'+(Math.floor(Math.random()*9000)+1000),type:'Chair',name:'',zone:'Storage Room A',condition:'Good',status:'Available',dept:'Logistics',value:''})}>
+            Clear Form
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   EVENT PLANNER + DEPLOYMENT VISUALIZER
+═══════════════════════════════════════════════════ */
+function EventPlanner({ state, setState, role }) {
+  const rc = ROLE_CONFIG[role];
+  const [step, setStep] = useState('plan'); // plan | review | deploying
+  const [depId, setDepId] = useState(null);
+  const [form, setForm] = useState({ event:'Annual Conference', from:'Storage Room B', to:'Main Hall', chairs:100, tables:10, projectors:2, speakers:2, returnTime:'6 hours' });
+  const [batches, setBatches] = useState([]);
+  const [activeBatch, setActiveBatch] = useState(0);
+  const [timeline, setTimeline] = useState([]);
+  const [progress, setProgress] = useState(0);
+  const timerRef = useRef(null);
+
+  const createPlan = () => {
+    const id = `EV-${String.fromCharCode(65+Math.floor(Math.random()*3))}${Math.floor(Math.random()*900)+100}`;
+    setDepId(id);
+    setStep('review');
+  };
+
+  const startDeployment = () => {
+    const newBatches = [];
+    let c = parseInt(form.chairs)||0, t = parseInt(form.tables)||0, p = parseInt(form.projectors)||0, s = parseInt(form.speakers)||0;
+    for(let i=0;c>0;i++){const sz=Math.min(25,c);newBatches.push({id:`Chair-Batch-${i+1}`,type:'Chair',size:sz,status:'preparing',progress:0});c-=sz;}
+    for(let i=0;t>0;i++){const sz=Math.min(5,t);newBatches.push({id:`Table-Batch-${i+1}`,type:'Table',size:sz,status:'preparing',progress:0});t-=sz;}
+    for(let i=0;p>0;i++){newBatches.push({id:`Projector-${i+1}`,type:'Projector',size:1,status:'preparing',progress:0});p--;}
+    for(let i=0;s>0;i++){newBatches.push({id:`Speaker-${i+1}`,type:'Speaker',size:1,status:'preparing',progress:0});s--;}
+    setBatches(newBatches);
+    setTimeline([`[${new Date().toLocaleTimeString()}] Deployment ${depId} started`,`[${new Date().toLocaleTimeString()}] ${newBatches.length} batches prepared for movement`]);
+    setProgress(0); setActiveBatch(0);
+    setStep('deploying');
+
+    setState(s=>({...s, deployments:{...s.deployments,[depId]:{event:form.event,from:form.from,to:form.to,status:'In Transit',readiness:95,progress:0,chairs:form.chairs,tables:form.tables,projectors:form.projectors,speakers:form.speakers,started:'Just now'}}}));
+  };
+
+  const simulateMove = () => {
+    setBatches(prev => {
+      const next = [...prev];
+      let moved = false;
+      for(let i=0;i<next.length;i++){
+        if(next[i].status==='preparing'&&!moved){ next[i]={...next[i],status:'moving',progress:20}; moved=true; break; }
+        if(next[i].status==='moving'&&!moved){
+          const np = Math.min(100,next[i].progress+30);
+          if(np>=100){ next[i]={...next[i],status:'arrived',progress:100};
+            setTimeline(t=>[...t,`[${new Date().toLocaleTimeString()}] ${next[i].id} arrived at ${form.to}`]);
+          } else { next[i]={...next[i],progress:np}; }
+          moved=true; break;
+        }
+      }
+      const arrived = next.filter(b=>b.status==='arrived').length;
+      const pct = Math.round((arrived/next.length)*100);
+      setProgress(pct);
+      if(pct===100) setTimeline(t=>[...t,`[${new Date().toLocaleTimeString()}] ✅ Deployment ${depId} complete!`]);
+      return next;
+    });
+  };
+
+  const sourceRoom = state.rooms[form.from]||{};
+  const readiness = [
+    form.chairs<=sourceRoom.chairs, form.tables<=sourceRoom.tables,
+    form.projectors<=sourceRoom.projectors, form.speakers<=sourceRoom.speakers
+  ].filter(Boolean).length / 4 * 100;
+
+  const icons = {Chair:'🪑',Table:'📋',Projector:'📽️',Speaker:'🔊'};
+
+  if(step==='deploying') return (
+    <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-in">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <div>
+          <div style={{fontSize:20,fontWeight:800,color:'#fff'}}>🚛 Live Deployment — {depId}</div>
+          <div style={{fontSize:13,color:'#888'}}>{form.event} • {form.from} → {form.to}</div>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-primary" onClick={simulateMove} disabled={progress===100}>
+            <Icon name="zap" size={14} />  Simulate Move
+          </button>
+          <button className="btn btn-secondary" onClick={()=>{setStep('plan');setDepId(null);setBatches([]);setProgress(0);}}>
+            New Deployment
+          </button>
+        </div>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:16}}>
+        <div>
+          {/* Route visual */}
+          <div className="card" style={{padding:20,marginBottom:16}}>
+            <div style={{display:'flex',alignItems:'center',gap:16}}>
+              <div style={{flex:1,background:'#12121a',borderRadius:10,padding:16,textAlign:'center',border:'2px solid #2a2a3d'}}>
+                <div style={{fontSize:12,color:'#888',marginBottom:4}}>SOURCE</div>
+                <div style={{fontSize:16,fontWeight:700,color:'#fff'}}>{form.from}</div>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                <div style={{fontSize:20,color:rc.color}}>→</div>
+                <div className="pulse-dot" style={{width:8,height:8,borderRadius:'50%',background:rc.color}} />
+              </div>
+              <div style={{flex:1,background:`${rc.color}18`,borderRadius:10,padding:16,textAlign:'center',border:`2px solid ${rc.color}44`}}>
+                <div style={{fontSize:12,color:'#888',marginBottom:4}}>DESTINATION</div>
+                <div style={{fontSize:16,fontWeight:700,color:'#fff'}}>{form.to}</div>
+              </div>
+            </div>
+            <div style={{marginTop:16}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'#888',marginBottom:6}}>
+                <span>Overall Progress</span>
+                <span style={{color:rc.color,fontWeight:700}}>{progress}%</span>
+              </div>
+              <div className="progress-bar" style={{height:8}}>
+                <div className="progress-fill" style={{width:`${progress}%`,background:`linear-gradient(90deg,${rc.color},#00ff88)`}} />
+              </div>
+            </div>
+          </div>
+
+          {/* Batches */}
+          <div className="card" style={{padding:20}}>
+            <div style={{fontSize:13,fontWeight:700,color:'#fff',marginBottom:12}}>Asset Batches ({batches.length})</div>
+            <div style={{maxHeight:300,overflowY:'auto'}}>
+              {batches.map((b,i) => (
+                <div key={b.id} className="batch-bar" style={{borderColor:b.status==='arrived'?'#00ff8844':b.status==='moving'?`${rc.color}44`:'#2a2a3d'}}>
+                  <div style={{fontSize:16}}>{icons[b.type]||'📦'}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,fontWeight:600,color:'#ccc'}}>{b.id} ({b.size} units)</div>
+                    <div style={{marginTop:4}}>
+                      <div className="progress-bar" style={{height:3}}>
+                        <div className="progress-fill" style={{width:`${b.progress}%`,background:b.status==='arrived'?'#00ff88':rc.color}} />
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`tag ${b.status==='arrived'?'tag-green':b.status==='moving'?'tag-blue':'tag-muted'}`}>
+                    {b.status==='arrived'?'Arrived':b.status==='moving'?`${b.progress}%`:'Preparing'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <div className="card" style={{padding:20,height:'fit-content'}}>
+          <div style={{fontSize:13,fontWeight:700,color:'#fff',marginBottom:12}}>📋 Live Timeline</div>
+          <div style={{maxHeight:400,overflowY:'auto'}}>
+            {timeline.map((t,i) => (
+              <div key={i} className="timeline-item">
+                <div className="timeline-dot" style={{background:i===timeline.length-1?rc.color:'#2a2a3d',border:`2px solid ${rc.color}`}} />
+                <div style={{fontSize:11,color:i===timeline.length-1?'#ccc':'#666'}}>{t}</div>
+              </div>
+            ))}
+          </div>
+          {progress===100 && (
+            <div style={{marginTop:16,padding:12,background:'#00ff8818',border:'1px solid #00ff8844',borderRadius:8,textAlign:'center'}}>
+              <div style={{fontSize:20,marginBottom:4}}>🎉</div>
+              <div style={{fontSize:14,fontWeight:700,color:'#00ff88'}}>Deployment Complete!</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  if(step==='review') return (
+    <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-in">
+      <div style={{fontSize:20,fontWeight:800,color:'#fff',marginBottom:4}}>📋 Deployment Plan — {depId}</div>
+      <div style={{fontSize:13,color:'#888',marginBottom:24}}>{form.event}</div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
+        <div className="card" style={{padding:20}}>
+          <div style={{fontSize:13,fontWeight:700,color:'#888',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Route</div>
+          <div style={{fontSize:16,color:'#fff'}}>{form.from}</div>
+          <div style={{fontSize:16,color:'#888',margin:'4px 0'}}>↓</div>
+          <div style={{fontSize:16,color:'#fff'}}>{form.to}</div>
+          <div style={{marginTop:16,fontSize:12,color:'#888'}}>Expected Return: {form.returnTime}</div>
+        </div>
+        <div className="card" style={{padding:20}}>
+          <div style={{fontSize:13,fontWeight:700,color:'#888',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Readiness</div>
+          <div style={{fontSize:32,fontWeight:800,color:readiness>=90?'#00ff88':readiness>=70?'#ffb800':'#ff4444'}}>{Math.round(readiness)}%</div>
+          <div className="progress-bar" style={{marginTop:8}}>
+            <div className="progress-fill" style={{width:`${readiness}%`,background:readiness>=90?'#00ff88':readiness>=70?'#ffb800':'#ff4444'}} />
+          </div>
+        </div>
+      </div>
+      <div className="card" style={{padding:20,marginBottom:16}}>
+        <div style={{fontSize:13,fontWeight:700,color:'#888',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Asset Availability</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
+          {[['Chairs',form.chairs,sourceRoom.chairs,'🪑'],['Tables',form.tables,sourceRoom.tables,'📋'],['Projectors',form.projectors,sourceRoom.projectors,'📽️'],['Speakers',form.speakers,sourceRoom.speakers,'🔊']].map(([l,need,have,ic])=>(
+            <div key={l} style={{background:'#12121a',borderRadius:8,padding:12,textAlign:'center',border:`1px solid ${need<=have?'#00ff8833':'#ff444433'}`}}>
+              <div style={{fontSize:20}}>{ic}</div>
+              <div style={{fontSize:18,fontWeight:800,color:need<=have?'#00ff88':'#ff4444'}}>{need<=have?need:`${have}/${need}`}</div>
+              <div style={{fontSize:11,color:'#555'}}>{l}</div>
+              {need>have&&<div style={{fontSize:10,color:'#ff4444',marginTop:2}}>Short {need-have}</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{display:'flex',gap:12}}>
+        <button className="btn btn-success" style={{padding:'12px 28px',fontSize:14}} onClick={startDeployment}>
+          <Icon name="truck" size={15} /> 🚀 Start Deployment
+        </button>
+        <button className="btn btn-secondary" style={{padding:'12px 28px',fontSize:14}} onClick={()=>setStep('plan')}>← Back to Planning</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{height:'100%',display:'flex',gap:16,padding:24,overflow:'hidden'}} className="fade-in">
+      {/* Form */}
+      <div className="card" style={{flex:1,padding:24,overflowY:'auto'}}>
+        <div style={{fontSize:18,fontWeight:700,color:'#fff',marginBottom:4}}>📅 Event Deployment Planner</div>
+        <div style={{fontSize:13,color:'#666',marginBottom:24}}>Plan asset movements for your next event.</div>
+
+        <div style={{marginBottom:20}}>
+          <label style={{fontSize:12,color:'#888',display:'block',marginBottom:6}}>Event Name</label>
+          <input value={form.event} onChange={e=>setForm(f=>({...f,event:e.target.value}))} placeholder="e.g. Annual Conference" />
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:20}}>
+          <div>
+            <label style={{fontSize:12,color:'#888',display:'block',marginBottom:6}}>From Zone</label>
+            <select value={form.from} onChange={e=>setForm(f=>({...f,from:e.target.value}))}>
+              {Object.keys(state.rooms).map(r=><option key={r}>{r}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{fontSize:12,color:'#888',display:'block',marginBottom:6}}>To Zone</label>
+            <select value={form.to} onChange={e=>setForm(f=>({...f,to:e.target.value}))}>
+              {Object.keys(state.rooms).map(r=><option key={r}>{r}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div style={{fontSize:13,fontWeight:600,color:'#888',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Asset Requirements</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
+          {[['Chairs','chairs','🪑'],['Tables','tables','📋'],['Projectors','projectors','📽️'],['Speakers','speakers','🔊']].map(([l,k,ic])=>(
+            <div key={k}>
+              <label style={{fontSize:12,color:'#888',display:'block',marginBottom:6}}>{ic} {l}</label>
+              <input type="number" value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} min="0" />
+            </div>
+          ))}
+        </div>
+
+        <div style={{marginBottom:24}}>
+          <label style={{fontSize:12,color:'#888',display:'block',marginBottom:6}}>Expected Return Time</label>
+          <select value={form.returnTime} onChange={e=>setForm(f=>({...f,returnTime:e.target.value}))}>
+            {['2 hours','4 hours','6 hours','8 hours','1 day','2 days'].map(o=><option key={o}>{o}</option>)}
+          </select>
+        </div>
+
+        <button className="btn btn-primary" style={{padding:'12px 28px',fontSize:14}} onClick={createPlan}>
+          <Icon name="arrow" size={14} /> Create Deployment Plan
+        </button>
+      </div>
+
+      {/* Active Deployments */}
+      <div style={{width:280,display:'flex',flexDirection:'column',gap:12}}>
+        <div className="card" style={{padding:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#888',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Active Deployments</div>
+          {Object.entries(state.deployments).map(([id,dep]) => (
+            <div key={id} style={{padding:'10px 0',borderBottom:'1px solid #1e1e2e'}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                <span style={{fontSize:12,fontWeight:700,color:'#fff'}}>{id}</span>
+                <span className={`tag ${dep.status==='In Transit'?'tag-blue':'tag-amber'}`}>{dep.status}</span>
+              </div>
+              <div style={{fontSize:11,color:'#888',marginBottom:6}}>{dep.event}</div>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width:`${dep.progress*100}%`,background:rc.color}} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="card" style={{padding:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#888',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Source Stock</div>
+          {form.from && state.rooms[form.from] && Object.entries(state.rooms[form.from]).filter(([k,v])=>typeof v==='number'&&v>0&&['chairs','tables','projectors','speakers'].includes(k)).map(([k,v]) => (
+            <div key={k} style={{display:'flex',justifyContent:'space-between',padding:'4px 0',fontSize:12}}>
+              <span style={{color:'#888'}}>{k.charAt(0).toUpperCase()+k.slice(1)}</span>
+              <span style={{color:'#fff',fontWeight:600}}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   ASSET 360
+═══════════════════════════════════════════════════ */
+function Asset360({ state, role }) {
+  const rc = ROLE_CONFIG[role];
+  const [selectedAsset, setSelectedAsset] = useState('RFID-CH-2001');
+  const [tab, setTab] = useState(role);
+  const asset = state.assets[selectedAsset];
+
+  useEffect(() => setTab(role), [role]);
+
+  if (!asset) return <div style={{padding:24,color:'#888'}}>Select an asset</div>;
+
+  const logisticsView = (
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+      {[['Current Zone',asset.zone,'🏢'],['Status',asset.status,'⚡'],['Condition',asset.condition,'🔧'],['Last Movement','2 hours ago','🚛'],['Assigned Route','—','📍'],['ETA','—','⏱️']].map(([l,v,ic])=>(
+        <div key={l} style={{background:'#12121a',borderRadius:8,padding:12}}>
+          <div style={{fontSize:11,color:'#555',marginBottom:4}}>{ic} {l}</div>
+          <div style={{fontSize:14,fontWeight:700,color:'#fff'}}>{v}</div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const financeView = (
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+      {[['Asset Value',`$${asset.value.toLocaleString()}`,'💰'],['Depreciation','12%/yr','📉'],['Replacement Cost',`$${Math.round(asset.value*1.15).toLocaleString()}`,'🔄'],['Utilization Rate','87%','📊'],['Cost Center',asset.dept,'🏢'],['ROI Score','340%','📈']].map(([l,v,ic])=>(
+        <div key={l} style={{background:'#12121a',borderRadius:8,padding:12}}>
+          <div style={{fontSize:11,color:'#555',marginBottom:4}}>{ic} {l}</div>
+          <div style={{fontSize:14,fontWeight:700,color:'#00d084'}}>{v}</div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const eventsView = (
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+      {[['Last Event','Annual Conference','🎯'],['Times Deployed','28','📅'],['On-Time Returns','94%','✅'],['Next Scheduled','Board Meeting','📋'],['Return Status','Available','♻️'],['Event Grade','A+','🏆']].map(([l,v,ic])=>(
+        <div key={l} style={{background:'#12121a',borderRadius:8,padding:12}}>
+          <div style={{fontSize:11,color:'#555',marginBottom:4}}>{ic} {l}</div>
+          <div style={{fontSize:14,fontWeight:700,color:'#8b5cf6'}}>{v}</div>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div style={{height:'100%',display:'flex',gap:16,padding:24,overflow:'hidden'}} className="fade-in">
+      {/* Asset list */}
+      <div style={{width:240,display:'flex',flexDirection:'column',gap:12}}>
+        <div className="card" style={{padding:16,flex:1,overflowY:'auto'}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#888',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Assets ({Object.keys(state.assets).length})</div>
+          {Object.entries(state.assets).map(([id,a]) => (
+            <div key={id}
+              className="card-hover"
+              style={{padding:'10px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',
+                background:selectedAsset===id?`${rc.color}18`:'transparent',
+                border:`1px solid ${selectedAsset===id?rc.color:'transparent'}`}}
+              onClick={() => setSelectedAsset(id)}>
+              <div style={{fontSize:12,fontWeight:600,color:'#ccc'}}>{id}</div>
+              <div style={{fontSize:11,color:'#555'}}>{a.type} • {a.zone}</div>
+              <span className={`tag ${a.status==='Available'?'tag-green':a.status==='In Use'?'tag-blue':'tag-amber'}`} style={{marginTop:4}}>
+                {a.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Asset detail */}
+      <div style={{flex:1,display:'flex',flexDirection:'column',gap:12}}>
+        {/* Header */}
+        <div className="card" style={{padding:20,display:'flex',gap:16,alignItems:'center'}}>
+          <div style={{width:60,height:60,borderRadius:12,background:`${rc.color}22`,border:`2px solid ${rc.color}44`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28}}>
+            {asset.type==='Chair'?'🪑':asset.type==='Table'?'📋':asset.type==='Projector'?'📽️':asset.type==='Speaker'?'🔊':asset.type==='TV'?'📺':'💻'}
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:20,fontWeight:800,color:'#fff'}}>{selectedAsset}</div>
+            <div style={{fontSize:14,color:'#888'}}>{asset.name} • {asset.type}</div>
+            <div style={{display:'flex',gap:8,marginTop:6}}>
+              <span className={`tag ${asset.status==='Available'?'tag-green':asset.status==='In Use'?'tag-blue':'tag-amber'}`}>{asset.status}</span>
+              <span className={`tag ${asset.condition==='Good'?'tag-green':asset.condition==='Worn'?'tag-amber':'tag-red'}`}>{asset.condition}</span>
+              <span className="tag tag-muted">{asset.dept}</span>
+            </div>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <div style={{fontSize:24,fontWeight:800,color:rc.color}}>${asset.value.toLocaleString()}</div>
+            <div style={{fontSize:11,color:'#555'}}>Asset Value</div>
+          </div>
+        </div>
+
+        {/* Department tabs */}
+        <div className="card" style={{flex:1,padding:20,overflowY:'auto'}}>
+          <div style={{display:'flex',gap:4,marginBottom:20,background:'#12121a',borderRadius:8,padding:4}}>
+            {['Logistics','Finance','Events'].map(t => (
+              <button key={t}
+                style={{flex:1,padding:'8px',borderRadius:6,cursor:'pointer',border:'none',transition:'all 0.15s',fontSize:13,fontWeight:600,
+                  background:tab===t?ROLE_CONFIG[t].color:'transparent',
+                  color:tab===t?'#000':'#666'}}
+                onClick={() => setTab(t)}>{t} View</button>
+            ))}
+          </div>
+          <div className="fade-in">
+            <div style={{fontSize:14,fontWeight:700,color:'#fff',marginBottom:12}}>{tab} Intelligence</div>
+            {tab==='Logistics'?logisticsView:tab==='Finance'?financeView:eventsView}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   ALERTS
+═══════════════════════════════════════════════════ */
+function AlertsPage({ state, setState, role }) {
+  const rc = ROLE_CONFIG[role];
+  const [filter, setFilter] = useState('All');
+  const allAlerts = [...state.alerts, ...(state.auditResults ? Object.values(state.auditResults).flatMap(r => (r.alerts||[])) : [])];
+  const filtered = filter==='All' ? allAlerts : allAlerts.filter(a=>a.severity===filter.toLowerCase());
+
+  const severityColor = s => s==='error'?'#ff4444':s==='warning'?'#ffb800':'#00a3ff';
+  const severityBg = s => s==='error'?'#ff444415':s==='warning'?'#ffb80015':'#00a3ff15';
+  const typeIcon = t => t==='missing'?'📦':t==='damaged'?'🔧':t==='foreign'?'🚨':t==='discrepancy'?'⚡':'🔔';
+
+  return (
+    <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-in">
+      {/* Stats */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:24}}>
+        {[['Critical Alerts',allAlerts.filter(a=>a.severity==='error').length,'#ff4444'],
+          ['Warnings',allAlerts.filter(a=>a.severity==='warning').length,'#ffb800'],
+          ['Total Alerts',allAlerts.length,'#00a3ff'],
+          ['Resolved Today',12,'#00ff88']].map(([l,v,c])=>(
+          <div key={l} className="stat-card" style={{borderTop:`3px solid ${c}`}}>
+            <div style={{fontSize:11,color:'#666',marginBottom:6,textTransform:'uppercase',letterSpacing:1}}>{l}</div>
+            <div style={{fontSize:32,fontWeight:800,color:c}}>{v}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div style={{display:'flex',gap:8,marginBottom:16}}>
+        {['All','Error','Warning'].map(f => (
+          <button key={f} className={`btn ${filter===f?'btn-primary':'btn-secondary'}`} style={{height:32,fontSize:12}}
+            onClick={() => setFilter(f)}>{f}</button>
+        ))}
+        <button className="btn btn-secondary" style={{height:32,fontSize:12,marginLeft:'auto',color:'#ff4444'}}
+          onClick={() => setState(s=>({...s,alerts:[]}))}>Clear All</button>
+      </div>
+
+      {/* Alert list */}
+      <div style={{display:'flex',flexDirection:'column',gap:8}}>
+        {filtered.length === 0 && (
+          <div className="card" style={{padding:40,textAlign:'center',color:'#444',fontSize:14}}>
+            ✅ No alerts to display
+          </div>
+        )}
+        {filtered.map((alert,i) => (
+          <div key={alert.id||i} className="alert-row" style={{background:severityBg(alert.severity),border:`1px solid ${severityColor(alert.severity)}33`,borderRadius:10}}>
+            <div style={{fontSize:20}}>{typeIcon(alert.type)}</div>
+            <div style={{flex:1}}>
+              <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:4}}>
+                <span style={{fontSize:13,fontWeight:700,color:'#fff'}}>{alert.message}</span>
+                <span className={`tag ${alert.severity==='error'?'tag-red':'tag-amber'}`}>{alert.severity}</span>
+              </div>
+              <div style={{fontSize:11,color:'#666'}}>{alert.room} • {alert.time||'Just now'}</div>
+            </div>
+            <button className="btn btn-secondary" style={{height:30,fontSize:11,padding:'0 12px'}}
+              onClick={() => setState(s=>({...s,alerts:s.alerts.filter((_,j)=>j!==i)}))}>
+              Dismiss
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   ANALYTICS
+═══════════════════════════════════════════════════ */
+function Analytics({ state, role }) {
+  const rc = ROLE_CONFIG[role];
+  const utilData = [
+    { label:'Chairs', score:87, idle:13, deployed:74, color:'#00a3ff' },
+    { label:'Tables', score:34, idle:66, deployed:28, color:'#ffb800' },
+    { label:'Projectors', score:94, idle:6, deployed:88, color:'#00ff88' },
+    { label:'Speakers', score:78, idle:22, deployed:56, color:'#8b5cf6' },
+    { label:'TVs', score:45, idle:55, deployed:40, color:'#f97316' },
+    { label:'Laptops', score:62, idle:38, deployed:50, color:'#06b6d4' },
+  ];
+
+  return (
+    <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-in">
+      <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:16,marginBottom:16}}>
+        {/* Utilization */}
+        <div className="card" style={{padding:24}}>
+          <div style={{fontSize:16,fontWeight:700,color:'#fff',marginBottom:20}}>Fleet Utilization Scoring</div>
+          {utilData.map(d => (
+            <div key={d.label} style={{marginBottom:16}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+                <span style={{fontSize:13,color:'#ccc'}}>{d.label}</span>
+                <div style={{display:'flex',gap:12,fontSize:12}}>
+                  <span style={{color:'#555'}}>Idle: {d.idle}%</span>
+                  <span style={{color:d.color,fontWeight:700}}>{d.score}% utilization</span>
+                </div>
+              </div>
+              <div className="progress-bar" style={{height:8}}>
+                <div className="progress-fill" style={{width:`${d.score}%`,background:d.color}} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Summary */}
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          <div className="card" style={{padding:20}}>
+            <div style={{fontSize:13,fontWeight:700,color:'#888',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Fleet Overview</div>
+            {[['Total Assets','290'],['Deployed Now','190'],['Idle (30+ days)','15'],['In Maintenance','4'],['Damaged','2'],['Total Value','$2.4M']].map(([l,v])=>(
+              <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid #1e1e2e',fontSize:12}}>
+                <span style={{color:'#888'}}>{l}</span>
+                <span style={{color:'#fff',fontWeight:700}}>{v}</span>
+              </div>
+            ))}
+          </div>
+          <div className="card" style={{padding:20}}>
+            <div style={{fontSize:13,fontWeight:700,color:'#888',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Dept Attribution</div>
+            {[['Logistics','45%','#00a3ff'],['Events','35%','#8b5cf6'],['Finance','12%','#00d084'],['Facilities','8%','#ffb800']].map(([d,p,c])=>(
+              <div key={d} style={{marginBottom:10}}>
+                <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}}>
+                  <span style={{color:'#888'}}>{d}</span><span style={{color:c,fontWeight:700}}>{p}</span>
+                </div>
+                <div className="progress-bar" style={{height:4}}>
+                  <div className="progress-fill" style={{width:p,background:c}} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Movement trends + Cost */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+        <div className="card" style={{padding:20}}>
+          <div style={{fontSize:14,fontWeight:700,color:'#fff',marginBottom:16}}>Movement Trends (7 days)</div>
+          <div style={{display:'flex',gap:4,alignItems:'flex-end',height:100}}>
+            {[45,60,38,72,55,88,64].map((h,i)=>(
+              <div key={i} style={{flex:1,background:rc.color+'44',borderRadius:'4px 4px 0 0',height:`${h}%`,position:'relative',cursor:'pointer'}}
+                title={`${h} movements`}>
+                <div style={{position:'absolute',bottom:-18,left:'50%',transform:'translateX(-50%)',fontSize:10,color:'#555',whiteSpace:'nowrap'}}>
+                  {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card" style={{padding:20}}>
+          <div style={{fontSize:14,fontWeight:700,color:'#fff',marginBottom:16}}>Cost Attribution (Monthly)</div>
+          {[['Chair Fleet','$4,200','#00a3ff',65],['Projector Fleet','$2,100','#00ff88',32],['Table Fleet','$1,800','#ffb800',28],['AV Equipment','$3,400','#8b5cf6',52]].map(([l,v,c,p])=>(
+            <div key={l} style={{marginBottom:12}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}}>
+                <span style={{color:'#888'}}>{l}</span><span style={{color:c,fontWeight:700}}>{v}</span>
+              </div>
+              <div className="progress-bar" style={{height:5}}>
+                <div className="progress-fill" style={{width:`${p}%`,background:c}} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   AUDIT MODE
+═══════════════════════════════════════════════════ */
+function AuditMode({ state, setState, role }) {
+  const rc = ROLE_CONFIG[role];
+  const [step, setStep] = useState('select'); // select | ready | results
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [scanResult, setScanResult] = useState(null);
+  const [scanning, setScanning] = useState(false);
+
+  const rooms = Object.keys(state.rooms);
+
+  const startAudit = (room) => { setSelectedRoom(room); setStep('ready'); setScanResult(null); };
+
+  const simulateScan = () => {
+    setScanning(true);
+    setTimeout(() => {
+      const room = state.rooms[selectedRoom];
+      const expected = room.expected || {};
+      const detected = {};
+      const missing = {}, extra = {}, foreign = {};
+
+      Object.entries(expected).forEach(([type, exp]) => {
+        const roll = Math.random();
+        let det;
+        if(roll<0.4) det=exp;
+        else if(roll<0.65) det=Math.max(0,exp-Math.max(1,Math.round(exp*0.08)));
+        else if(roll<0.8) det=exp+Math.floor(Math.random()*3)+1;
+        else det=Math.max(0,exp-Math.max(2,Math.round(exp*0.15)));
+        detected[type]=det;
+        if(det<exp) missing[type]=exp-det;
+        else if(det>exp) extra[type]=det-exp;
+      });
+
+      if(Math.random()<0.3){ const f=['laptops','speakers','projectors'].find(t=>!(t in expected)); if(f){detected[f]=1;foreign[f]=1;} }
+
+      const totalExp = Object.values(expected).reduce((a,b)=>a+b,0);
+      const matched = Object.entries(expected).reduce((acc,[t,exp])=>acc+Math.min(exp,detected[t]||0),0);
+      const discrepancies = Object.values(missing).reduce((a,b)=>a+b,0)+Object.values(extra).reduce((a,b)=>a+b,0)+Object.values(foreign).reduce((a,b)=>a+b,0);
+      const score = Math.max(0,Math.round((matched/Math.max(totalExp,1))*100));
+      const status = discrepancies===0?'verified':score>=90?'warning':'critical';
+
+      const result = { score, status, expected, detected, missing, extra, foreign, discrepancies, room:selectedRoom, alerts:[] };
+
+      Object.entries(missing).forEach(([t,c])=>result.alerts.push({type:'missing',room:selectedRoom,asset:t,count:c,severity:'error',message:`${c} ${t} missing in ${selectedRoom}`,time:'Just now'}));
+      Object.entries(foreign).forEach(([t,c])=>result.alerts.push({type:'foreign',room:selectedRoom,asset:t,count:c,severity:'warning',message:`Foreign asset: ${c} ${t} in ${selectedRoom}`,time:'Just now'}));
+
+      setScanResult(result);
+      setStep('results');
+      setScanning(false);
+
+      setState(s=>({...s,
+        auditResults:{...s.auditResults,[selectedRoom]:result},
+        alerts:[...s.alerts,...result.alerts]
+      }));
+    }, 1800);
+  };
+
+  const scoreColor = s => s ? (s==='verified'?'#00ff88':s==='warning'?'#ffb800':'#ff4444') : '#888';
+
+  if(step==='results' && scanResult) return (
+    <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-in">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <div>
+          <div style={{fontSize:20,fontWeight:800,color:'#fff'}}>Audit Complete — {selectedRoom}</div>
+          <div style={{fontSize:13,color:'#888'}}>Inventory verification results</div>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-secondary" onClick={()=>setStep('select')}>← Select Room</button>
+          <button className="btn btn-primary" onClick={()=>{setSelectedRoom(null);setStep('select');}}>Audit Another</button>
+        </div>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap:16}}>
+        {/* Score */}
+        <div>
+          <div className="card" style={{padding:24,textAlign:'center',marginBottom:12,border:`2px solid ${scoreColor(scanResult.status)}`}}>
+            <div style={{fontSize:11,color:'#666',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Room Integrity Score</div>
+            <div style={{fontSize:56,fontWeight:900,color:scoreColor(scanResult.status),lineHeight:1}}>{scanResult.score}%</div>
+            <div style={{fontSize:13,color:'#888',marginTop:8}}>
+              {scanResult.status==='verified'?'✅ Verified':scanResult.status==='warning'?'⚠️ Minor Issues':'🔴 Critical Issues'}
+            </div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+            {[['Discrepancies',scanResult.discrepancies,scanResult.discrepancies>0?'#ff4444':'#00ff88'],['Completion','100%','#00ff88'],['Missing',Object.keys(scanResult.missing).length,'#ff4444'],['Foreign',Object.keys(scanResult.foreign).length,'#ffb800']].map(([l,v,c])=>(
+              <div key={l} className="stat-card" style={{textAlign:'center',padding:12}}>
+                <div style={{fontSize:20,fontWeight:800,color:c}}>{v}</div>
+                <div style={{fontSize:10,color:'#555',marginTop:2}}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Breakdown */}
+        <div>
+          <div className="card" style={{padding:20,marginBottom:12}}>
+            <div style={{fontSize:13,fontWeight:700,color:'#fff',marginBottom:12}}>Asset Comparison</div>
+            {Object.entries(scanResult.expected).map(([type,exp]) => {
+              const det = scanResult.detected[type]||0;
+              const ok = det===exp;
+              const low = det<exp;
+              const bg = ok?'#1a2a1a':low?'#2a1a1a':'#2a2a1a';
+              const tc = ok?'#00ff88':low?'#ff4444':'#ffb800';
+              return (
+                <div key={type} style={{background:bg,borderRadius:8,padding:'10px 14px',marginBottom:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontSize:13,color:'#ccc',textTransform:'capitalize'}}>{type}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:tc}}>
+                    {ok?`✅ ${det}/${exp}`:low?`🔴 ${det}/${exp} (Missing ${exp-det})`:`⚠️ ${det}/${exp} (+${det-exp} extra)`}
+                  </span>
+                </div>
+              );
+            })}
+            {Object.entries(scanResult.foreign).map(([type,c]) => (
+              <div key={type} style={{background:'#1a2a1a',borderRadius:8,padding:'10px 14px',marginBottom:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:13,color:'#ccc'}}>{type} <span style={{color:'#ffb800'}}>(Foreign)</span></span>
+                <span style={{fontSize:13,fontWeight:700,color:'#ffb800'}}>⚠️ {c} unregistered</span>
+              </div>
+            ))}
+          </div>
+
+          {scanResult.alerts.length>0 && (
+            <div className="card" style={{padding:20}}>
+              <div style={{fontSize:13,fontWeight:700,color:'#ffb800',marginBottom:10}}>⚠️ Generated Alerts ({scanResult.alerts.length})</div>
+              {scanResult.alerts.map((a,i)=>(
+                <div key={i} style={{display:'flex',gap:8,padding:'6px 0',borderBottom:'1px solid #1e1e2e',fontSize:12}}>
+                  <span>{a.severity==='error'?'🔴':'🟡'}</span>
+                  <span style={{color:a.severity==='error'?'#ff4444':'#ffb800'}}>{a.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  if(step==='ready') return (
+    <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-in">
+      <button className="btn btn-secondary" style={{marginBottom:16}} onClick={()=>setStep('select')}>← Back</button>
+      <div style={{fontSize:20,fontWeight:800,color:'#fff',marginBottom:4}}>📍 Auditing: {selectedRoom}</div>
+      <div style={{fontSize:13,color:'#888',marginBottom:20}}>Verify expected inventory against physical scan</div>
+
+      <div className="card" style={{padding:24,marginBottom:16,border:`2px solid ${rc.color}44`}}>
+        <div style={{fontSize:14,fontWeight:700,color:'#fff',marginBottom:16}}>📋 Expected Inventory Manifest</div>
+        {Object.entries(state.rooms[selectedRoom].expected||{}).map(([type,count])=>(
+          <div key={type} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px',background:'#12121a',borderRadius:8,marginBottom:6}}>
+            <span style={{fontSize:13,color:'#ccc',textTransform:'capitalize'}}>{type}</span>
+            <span style={{fontSize:18,fontWeight:800,color:rc.color}}>{count}</span>
+          </div>
+        ))}
+        <div style={{display:'flex',justifyContent:'space-between',padding:'10px 14px',borderTop:'1px solid #2a2a3d',marginTop:8}}>
+          <span style={{fontSize:13,fontWeight:700,color:'#888'}}>Total Expected</span>
+          <span style={{fontSize:18,fontWeight:800,color:rc.color}}>{Object.values(state.rooms[selectedRoom].expected||{}).reduce((a,b)=>a+b,0)}</span>
+        </div>
+      </div>
+
+      <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',height:52,fontSize:15}} onClick={simulateScan} disabled={scanning}>
+        {scanning ? <span className="pulse-dot">🔄 Scanning room...</span> : '🔍 Simulate Room Scan'}
+      </button>
+    </div>
+  );
+
+  return (
+    <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-in">
+      <div style={{fontSize:20,fontWeight:800,color:'#fff',marginBottom:4}}>🔍 Audit Mode</div>
+      <div style={{fontSize:13,color:'#888',marginBottom:20}}>Select a room to begin inventory verification</div>
+
+      {Object.keys(state.auditResults).length>0 && (
+        <div className="card" style={{padding:16,marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#888',marginBottom:10,textTransform:'uppercase',letterSpacing:1}}>Recent Audits</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {Object.entries(state.auditResults).map(([room,res])=>(
+              <div key={room} style={{background:'#12121a',borderRadius:8,padding:'6px 12px',fontSize:12}}>
+                <span style={{color:'#888'}}>{room}: </span>
+                <span style={{color:scoreColor(res.status),fontWeight:700}}>{res.score}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12}}>
+        {rooms.map(room => {
+          const auditRes = state.auditResults[room];
+          const borderC = auditRes ? scoreColor(auditRes.status)+'66' : '#2a2a3d';
+          const expected = state.rooms[room].expected||{};
+          const total = Object.values(expected).reduce((a,b)=>a+b,0);
+          return (
+            <div key={room} className="card card-hover" style={{padding:20,border:`1px solid ${borderC}`,cursor:'pointer'}} onClick={()=>startAudit(room)}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+                <div style={{fontSize:14,fontWeight:700,color:'#fff'}}>{auditRes?(auditRes.status==='verified'?'✅ ':'⚠️ '):''}{room}</div>
+                {auditRes && <span style={{fontSize:16,fontWeight:800,color:scoreColor(auditRes.status)}}>{auditRes.score}%</span>}
+              </div>
+              <div style={{fontSize:12,color:'#555',marginBottom:12}}>{total} expected assets{auditRes?` • ${auditRes.discrepancies} discrepancies`:' • Not audited'}</div>
+              <button className="btn btn-primary" style={{height:32,fontSize:12,padding:'0 14px'}}>Audit →</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   SYSTEM DEPLOYMENT
+═══════════════════════════════════════════════════ */
+function SystemDeployment({ role }) {
+  const rc = ROLE_CONFIG[role];
+  const modes = [
+    { name:'Handheld Mode', icon:'📱', desc:'Mobile RFID scanners for on-the-go asset tagging', features:['Bluetooth RFID reader','QR code backup','Offline sync','GPS location tagging'], status:'Active', color:'#00a3ff' },
+    { name:'Smart Zone Mode', icon:'📡', desc:'Fixed RFID readers at zone entry/exit points', features:['Auto-detect zone transitions','Real-time count updates','No manual scanning','Multi-reader support'], status:'Active', color:'#00ff88' },
+    { name:'Enterprise Network', icon:'🌐', desc:'Full API integration with ERP and CAFM systems', features:['SAP / Oracle sync','Webhook events','REST API access','SSO Authentication'], status:'Beta', color:'#8b5cf6' },
+  ];
+
+  const metrics = [
+    { label:'Nodes Online', value:'24/24', color:'#00ff88' },
+    { label:'Scan Rate', value:'1.2k/hr', color:'#00a3ff' },
+    { label:'API Uptime', value:'99.98%', color:'#00ff88' },
+    { label:'Sync Latency', value:'< 200ms', color:'#00a3ff' },
+    { label:'Data Points', value:'2.4M', color:'#8b5cf6' },
+    { label:'Alert Speed', value:'< 2sec', color:'#ffb800' },
+  ];
+
+  return (
+    <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-in">
+      {/* Header */}
+      <div style={{marginBottom:24}}>
+        <div style={{fontSize:20,fontWeight:800,color:'#fff',marginBottom:4}}>⚡ System Deployment</div>
+        <div style={{fontSize:13,color:'#888'}}>RELAY infrastructure modes and scalability options</div>
+      </div>
+
+      {/* Live Metrics */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:12,marginBottom:24}}>
+        {metrics.map(m=>(
+          <div key={m.label} className="stat-card" style={{textAlign:'center',padding:16}}>
+            <div style={{fontSize:20,fontWeight:800,color:m.color}}>{m.value}</div>
+            <div style={{fontSize:10,color:'#555',marginTop:4,textTransform:'uppercase',letterSpacing:0.5}}>{m.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Deployment Modes */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginBottom:24}}>
+        {modes.map(m=>(
+          <div key={m.name} className="card" style={{padding:24,border:`1px solid ${m.color}33`}}>
+            <div style={{fontSize:36,marginBottom:12}}>{m.icon}</div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+              <div style={{fontSize:16,fontWeight:700,color:'#fff'}}>{m.name}</div>
+              <span className={`tag ${m.status==='Active'?'tag-green':'tag-purple'}`}>{m.status}</span>
+            </div>
+            <div style={{fontSize:13,color:'#666',marginBottom:16}}>{m.desc}</div>
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {m.features.map(f=>(
+                <div key={f} style={{display:'flex',gap:8,fontSize:12,color:'#888'}}>
+                  <Icon name="check" size={12} color={m.color} />
+                  {f}
+                </div>
+              ))}
+            </div>
+            <button className="btn" style={{marginTop:16,width:'100%',justifyContent:'center',height:36,fontSize:13,background:`${m.color}22`,color:m.color,border:`1px solid ${m.color}44`}}>
+              Configure
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Architecture diagram (text) */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+        <div className="card" style={{padding:20}}>
+          <div style={{fontSize:14,fontWeight:700,color:'#fff',marginBottom:16}}>System Architecture</div>
+          {[
+            ['RFID Hardware Layer','Readers, tags, antennas, handhelds','#00a3ff'],
+            ['Edge Processing','On-site gateways, local caching','#00ff88'],
+            ['Cloud API','REST endpoints, webhooks, events','#8b5cf6'],
+            ['RELAY Platform','This dashboard + mobile app','#ffb800'],
+            ['ERP Integration','SAP, Oracle, custom systems','#f97316'],
+          ].map(([layer,desc,c],i)=>(
+            <div key={layer} style={{display:'flex',gap:12,padding:'10px 0',borderBottom:i<4?'1px solid #1e1e2e':''}}>
+              <div style={{width:4,background:c,borderRadius:2,flexShrink:0}} />
+              <div>
+                <div style={{fontSize:12,fontWeight:700,color:'#ccc'}}>{layer}</div>
+                <div style={{fontSize:11,color:'#555'}}>{desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="card" style={{padding:20}}>
+          <div style={{fontSize:14,fontWeight:700,color:'#fff',marginBottom:16}}>Scalability Specs</div>
+          {[
+            ['Max Assets','500,000+'],['Max Zones','Unlimited'],['Concurrent Users','1,000+'],
+            ['Scan Throughput','50,000/min'],['Data Retention','7 years'],['API Rate Limit','10k req/min'],
+            ['Deployment','Cloud / On-premise'],['SLA','99.99% uptime'],
+          ].map(([l,v])=>(
+            <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid #1e1e2e',fontSize:12}}>
+              <span style={{color:'#888'}}>{l}</span>
+              <span style={{color:'#fff',fontWeight:700}}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   MAIN APP
+═══════════════════════════════════════════════════ */
+function App() {
+  const [state, setState] = useState(INITIAL_STATE);
+
+  const currentPage = state.currentPage;
+  const role = state.role;
+
+  const navigate = (page) => setState(s => ({...s, currentPage:page}));
+  const setRole  = (r)    => setState(s => ({...s, role:r}));
+
+  const pageProps = { state, setState, role };
+
+  const pages = {
+    'Command Center':    <CommandCenter {...pageProps} />,
+    'Live Map':          <LiveMap {...pageProps} />,
+    'Scanner':           <Scanner {...pageProps} />,
+    'Event Planner':     <EventPlanner {...pageProps} />,
+    'Asset 360':         <Asset360 {...pageProps} />,
+    'Alerts':            <AlertsPage {...pageProps} />,
+    'Analytics':         <Analytics {...pageProps} />,
+    'Audit Mode':        <AuditMode {...pageProps} />,
+    'System Deployment': <SystemDeployment {...pageProps} />,
+  };
+
+  return (
+    <div style={{display:'flex',height:'100vh',overflow:'hidden'}}>
+      <Sidebar currentPage={currentPage} onNavigate={navigate} role={role} />
+      <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+        <TopBar role={role} onRoleChange={setRole} currentPage={currentPage} alertCount={state.alerts.length} />
+        <div style={{flex:1,overflow:'hidden',background:'#0a0a0f'}}>
+          <div key={currentPage} style={{height:'100%'}}>
+            {pages[currentPage] || <div style={{padding:24,color:'#888'}}>Page not found</div>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
